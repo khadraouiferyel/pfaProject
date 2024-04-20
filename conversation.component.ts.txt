@@ -1,0 +1,88 @@
+import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { WebSocketService } from '../../services/web-socket.service';
+
+
+@Component({
+  selector: 'app-conversation',
+  templateUrl: './conversation.component.html',
+  styleUrls: ['./conversation.component.css']
+})
+export class ConversationComponent implements OnInit {
+  message: any;
+  messages: { groupId: string, message: string , timestamp: string, img: string}[] = [];
+  groupId: string = '';
+  imageURL: string | ArrayBuffer | null = null;
+  parsedMessage: any;
+  img: string = '';
+  imageUrl: string | null = null;
+
+  constructor(
+    private webSocketService: WebSocketService,
+    private activatedRoute: ActivatedRoute
+  ) {}
+
+  ngOnInit() {
+      this.activatedRoute.params.subscribe(params => {
+      this.groupId = params['groupId'];
+    });
+
+    this.webSocketService.getMessage().subscribe((msg: any) => {
+       // Add message to the array
+      console.log("message recu");
+      try {
+        this.parsedMessage = JSON.parse(msg);
+        console.log('Le message est un JSON :', this.parsedMessage);
+      } catch (error) {
+        console.log('Le message n\'est pas un JSON :', msg);
+      }
+      this.messages.push(this.parsedMessage);
+      console.log(this.messages);
+    });
+
+    }
+
+    onFileSelected(event: any) {
+      const file: File = event.target.files[0];
+      console.log(file);
+
+      const fileDetailsAsString = JSON.stringify({
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified,
+      });
+      
+      console.log("image file : ",fileDetailsAsString);
+      this.img = fileDetailsAsString;
+      
+      // Vérification du type de fichier
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          this.imageUrl = reader.result as string;
+          console.log("url de limage : ",this.imageUrl);
+        };
+        // Lecture du contenu du fichier en tant que chaîne de caractères base64
+        reader.readAsDataURL(file);
+      } else {
+        console.error('Le fichier sélectionné n\'est pas une image.');
+        // Affichez un message d'erreur ou effectuez une action appropriée
+      }
+    }
+
+
+  sendMessage() {
+    const messageObject = {
+      groupId: this.groupId,
+      message: this.message,
+      timestamp: new Date().toLocaleTimeString(),
+      img: this.img
+    };
+
+    const messageJson = JSON.stringify(messageObject);
+    this.webSocketService.sendMessage(messageJson);
+
+    this.message = '';
+  }
+}
