@@ -162,7 +162,6 @@ getGroupe () {
       this.sendMessage();
     }
   }
-  
 
 
   isDropdownOpen: boolean = false;
